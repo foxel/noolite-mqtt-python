@@ -3,6 +3,7 @@
 import paho.mqtt.client as mqtt
 from noolite_serial import NooLiteSerial
 import re
+from time import sleep
 
 PREFIX = 'foxhome/noolite'
 
@@ -33,6 +34,7 @@ def on_message(client, userdata, msg):
         cmd = str(msg.payload)
         if cmd in COMMANDS_MAP:
             noo_serial.send_command(ch, COMMANDS_MAP[cmd], mode=0)
+            sleep(0.3)
 
 
 noo_serial = NooLiteSerial('/dev/ttyS0')

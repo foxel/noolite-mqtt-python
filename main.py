@@ -98,7 +98,7 @@ while run:
                 temp = deci_temp / 10.0
                 hum = ord(packet[9])
                 mqtt_client.publish(
-                    '%s/humidity/%d' % (PREFIX, ch),
+                    '%s/temperature/%d' % (PREFIX, ch),
                     '%.1f' % temp
                 )
                 mqtt_client.publish(

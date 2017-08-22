@@ -91,4 +91,18 @@ while run:
                     '%s/switch/%d' % (PREFIX, ch),
                     'OFF'
                 )
+            elif cmd == 21: # temperature & humidity sensor
+                deci_temp = ord(packet[7]) | ((ord(packet[8]) & 0x0f) << 8)
+                if deci_temp & 0x0800:
+                    deci_temp |= 0xf000
+                temp = deci_temp / 10.0
+                hum = ord(packet[9])
+                mqtt_client.publish(
+                    '%s/humidity/%d' % (PREFIX, ch),
+                    '%.1f' % temp
+                )
+                mqtt_client.publish(
+                    '%s/humidity/%d' % (PREFIX, ch),
+                    '%d' % hum
+                )
     mqtt_client.loop()

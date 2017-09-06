@@ -1,7 +1,7 @@
 #!/usr/bin/python2.7
 
 import serial
-
+from time import sleep
 
 class NooLiteCommand:
     def __init__(self, ch, cmd, mode=0, ctr=0, res=0, fmt=0, d0=0, d1=0, d2=0, d3=0, id0=0, id1=0, id2=0, id3=0):
@@ -81,6 +81,14 @@ class NooLiteSerial:
         self.send_command(ch, 128, 2, 0)
         pass
 
+    def bind(self, ch):
+        self.send_command(ch, 15, 2, 0)
+        pass
+
+    def unbind(self, ch):
+        self.send_command(ch, 9, 2, 0)
+        pass
+
     def send_command(self, ch, cmd, mode=0, ctr=0, res=0, fmt=0, d0=0, d1=0, d2=0, d3=0, id0=0, id1=0, id2=0, id3=0):
         command = NooLiteCommand(ch, cmd, mode, ctr, res, fmt, d0, d1, d2, d3, id0, id1, id2, id3)
         self.tty.write(command.to_bytes())
@@ -88,8 +96,16 @@ class NooLiteSerial:
 
     def receive(self):
         all_responses = list()
-        while self.tty.inWaiting() >= 17:
-            bytes_response = list(self.tty.read(17))
+        received = 0
+        tries = 20
+        while tries > 0 and received < 17:
+            tries -= 1
+            waiting = self.tty.inWaiting()
+            if waiting == 0:
+                sleep(0.025)
+                continue
+            bytes_response = list(self.tty.read(waiting))
+            received += waiting
             if bytes_response:
                 all_responses.append(bytes_response)
                 if bytes_response[3] == 0:

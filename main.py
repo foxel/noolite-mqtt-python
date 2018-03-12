@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3
 
 import paho.mqtt.client as mqtt
 from noolite_serial import NooLiteSerial
@@ -62,12 +62,12 @@ class NooLiteMQTT:
 
     # The callback for when a PUBLISH message is received from the server.
     def _on_message(self, _client, _userdata, msg):
-        print(msg.topic+": "+str(msg.payload))
+        print(msg.topic+": "+msg.payload.decode())
 
         tx_match = re.match('%s/tx/(\d+)' % PREFIX, msg.topic)
         if tx_match:
             ch = int(tx_match.group(1))
-            cmd = str(msg.payload)
+            cmd = msg.payload.decode()
             if cmd in COMMANDS:
                 self._noo_serial.send_command(ch, COMMANDS[cmd], mode=0)
                 sleep(0.3)
@@ -75,22 +75,22 @@ class NooLiteMQTT:
         tx_match = re.match('%s/tx-f/(\d+)' % PREFIX, msg.topic)
         if tx_match:
             ch = int(tx_match.group(1))
-            cmd = str(msg.payload)
+            cmd = msg.payload.decode()
             if cmd in F_COMMANDS:
                 self._noo_serial.send_command(ch, F_COMMANDS[cmd], mode=2)
                 sleep(0.3)
 
     # The callback to call when packet received from noolite
     def _on_packet(self, packet):
-        mode = ord(packet[1])
-        ch = ord(packet[4])
-        cmd = ord(packet[5])
+        mode = packet[1]
+        ch = packet[4]
+        cmd = packet[5]
         self._mqtt_client.publish(
             '%s/echo/%d' % (PREFIX, ch),
-            '[%s]' % ','.join([str(ord(b)) for b in packet])
+            '[%s]' % ','.join([str(b) for b in packet])
         )
         if mode == 2 and cmd == 130:
-            state = ord(packet[9]) & 0x0f
+            state = packet[9] & 0x0f
             self._mqtt_client.publish(
                 '%s/state-f/%d' % (PREFIX, ch),
                 'ON' if state > 0 else 'OFF',
@@ -108,7 +108,7 @@ class NooLiteMQTT:
                     'OFF'
                 )
             elif cmd == 21:  # temperature & humidity sensor
-                deci_temp = ord(packet[7]) | ((ord(packet[8]) & 0x0f) << 8)
+                deci_temp = packet[7] | ((packet[8] & 0x0f) << 8)
 
                 # fix for signed 12-bit values
                 if deci_temp & 0x0800:
@@ -116,7 +116,7 @@ class NooLiteMQTT:
                     deci_temp = c_int16(deci_temp | 0xf000).value
 
                 temp = deci_temp / 10.0
-                hum = ord(packet[9])
+                hum = packet[9]
                 self._mqtt_client.publish(
                     '%s/temperature/%d' % (PREFIX, ch),
                     '%.1f' % temp

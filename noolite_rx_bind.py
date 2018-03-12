@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3
 
 import sys
 from noolite_serial import NooLiteSerial
@@ -9,4 +9,4 @@ if len(sys.argv) < 2:
     raise Exception('Not Enough params')
 
 noo_serial.send_command(int(sys.argv[1]), 0, mode=1, ctr=3)
-print noo_serial.receive()
+print(noo_serial.receive())

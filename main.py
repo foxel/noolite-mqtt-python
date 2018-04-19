@@ -129,7 +129,7 @@ class NooLiteMQTT:
         )
         if mode == 2 and cmd == 130:
             state = packet[9] & 0x0f
-            brightness = ord(packet[10]) & 0xff
+            brightness = packet[10] & 0xff
             self._mqtt_client.publish(
                 '%s/state-f/%d' % (self._mqtt_prefix, ch),
                 'ON' if state > 0 else 'OFF',

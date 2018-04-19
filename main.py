@@ -15,12 +15,20 @@ COMMANDS = {
     'BIND': 15,
 }
 
+COMMANDS_FMT1 = {
+    'BRIGHTNESS': 6,
+}
+
 F_COMMANDS = {
     'OFF': 0,
     'ON': 2,
     'SWITCH': 4,
     'BIND': 15,
     'GET_STATE': 128,
+}
+
+F_COMMANDS_FMT1 = {
+    'BRIGHTNESS': 6,
 }
 
 
@@ -80,6 +88,32 @@ class NooLiteMQTT:
                 self._noo_serial.send_command(ch, F_COMMANDS[cmd], mode=2)
                 sleep(0.3)
 
+        tx_match = re.match(
+            '%s/tx/(\d+)/([A-Z]+)' % PREFIX, msg.topic
+        )
+        if tx_match:
+            ch = int(tx_match.group(1))
+            cmd = str(tx_match.group(2))
+            if cmd in COMMANDS_FMT1:
+                arg = int(msg.payload.decode())
+                self._noo_serial.send_command(
+                    ch, COMMANDS_FMT1[cmd], mode=0, fmt=1, d0=arg
+                )
+                sleep(0.3)
+
+        tx_match = re.match(
+            '%s/tx-f/(\d+)/([A-Z]+)' % PREFIX, msg.topic
+        )
+        if tx_match:
+            ch = int(tx_match.group(1))
+            cmd = str(tx_match.group(2))
+            if cmd in F_COMMANDS_FMT1:
+                arg = int(msg.payload.decode())
+                self._noo_serial.send_command(
+                    ch, F_COMMANDS_FMT1[cmd], mode=2, fmt=1, d0=arg
+                )
+                sleep(0.3)
+
     # The callback to call when packet received from noolite
     def _on_packet(self, packet):
         mode = ord(packet[1])
@@ -91,9 +125,15 @@ class NooLiteMQTT:
         )
         if mode == 2 and cmd == 130:
             state = ord(packet[9]) & 0x0f
+            brightness = ord(packet[10]) & 0xff
             self._mqtt_client.publish(
                 '%s/state-f/%d' % (PREFIX, ch),
                 'ON' if state > 0 else 'OFF',
+                retain=True
+            )
+            self._mqtt_client.publish(
+                '%s/state-f/%d/brightness' % (PREFIX, ch),
+                str(brightness),
                 retain=True
             )
         elif mode == 1:

@@ -3,7 +3,7 @@
 import paho.mqtt.client as mqtt
 from noolite_serial import NooLiteSerial
 import re
-from time import sleep
+from time import sleep, monotonic as time
 import signal
 import argparse
 
@@ -36,25 +36,41 @@ class NooLiteMQTT:
                  mqtt_port: int, mqtt_prefix: str):
         self._noo_serial = NooLiteSerial(serial_device)
 
+        self._mqtt_prefix = mqtt_prefix
+
         self._mqtt_client = mqtt.Client()
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_message = self._on_message
 
-        self._mqtt_client.connect(mqtt_host, mqtt_port, 60)
-        self._mqtt_prefix = mqtt_prefix
+        self._postponed = []
 
         self._exit = False
+
+        self._mqtt_client.will_set('%s/LWT' % self._mqtt_prefix, 'Offline', 0, True)
+        self._mqtt_client.connect(mqtt_host, mqtt_port, 60)
 
     def loop(self):
         signal.signal(signal.SIGINT, self._interrupt_handler)
         signal.signal(signal.SIGTERM, self._interrupt_handler)
+
+        self._mqtt_client.publish('%s/LWT' % self._mqtt_prefix, 'Online', 0, True)
 
         while not self._exit:
             # first receive packets from noolite serial
             packets = self._noo_serial.receive()
             for packet in packets:
                 self._on_packet(packet)
-            # here we run MQTT messages
+
+            # here we work with postponed messages
+            postponed = []
+            for (trigger_time, topic, payload) in self._postponed:
+                if trigger_time < time():
+                    self._mqtt_client.publish(topic, payload)
+                else:
+                    postponed.append((trigger_time, topic, payload))
+            self._postponed = postponed
+
+            # here we run MQTT loop
             self._mqtt_client.loop()
 
     def _interrupt_handler(self, _signal, _frame):
@@ -62,7 +78,7 @@ class NooLiteMQTT:
         self._exit = True
 
     # The callback for when the client receives a CONNACK response
-    def _on_connect(self, client, _userdata, _flags, rc):
+    def _on_connect(self, client: mqtt.Client, _user_data, _flags, rc: int):
         print('Connected with result code %d' % rc)
 
         # Subscribing in on_connect() means that if we lose the connection and
@@ -73,8 +89,8 @@ class NooLiteMQTT:
         ])
 
     # The callback for when a PUBLISH message is received from the server.
-    def _on_message(self, _client, _userdata, msg):
-        print(msg.topic+': '+msg.payload.decode())
+    def _on_message(self, _client: mqtt.Client, _user_data, msg: mqtt.MQTTMessage):
+        print(msg.topic + ': ' + msg.payload.decode())
 
         tx_match = re.match('%s/tx/(\d+)' % self._mqtt_prefix, msg.topic)
         if tx_match:
@@ -119,7 +135,7 @@ class NooLiteMQTT:
                 sleep(0.3)
 
     # The callback to call when packet received from noolite
-    def _on_packet(self, packet):
+    def _on_packet(self, packet: bytes):
         mode = packet[1]
         ch = packet[4]
         cmd = packet[5]
@@ -127,30 +143,38 @@ class NooLiteMQTT:
             '%s/echo/%d' % (self._mqtt_prefix, ch),
             '[%s]' % ','.join([str(b) for b in packet])
         )
-        if mode == 2 and cmd == 130:
-            state = packet[9] & 0x0f
-            brightness = packet[10] & 0xff
-            self._mqtt_client.publish(
-                '%s/state-f/%d' % (self._mqtt_prefix, ch),
-                'ON' if state > 0 else 'OFF',
-                retain=True
-            )
-            self._mqtt_client.publish(
-                '%s/state-f/%d/brightness' % (self._mqtt_prefix, ch),
-                str(brightness),
-                retain=True
-            )
-        elif mode == 1:
-            if cmd == 25 or cmd == 2:
+        if mode == 2:  # nooLite-F
+            if cmd == 130:  # switch state
+                state = packet[9] & 0x0f
+                brightness = packet[10] & 0xff
                 self._mqtt_client.publish(
-                    '%s/switch/%d' % (self._mqtt_prefix, ch),
-                    'ON'
+                    '%s/state-f/%d' % (self._mqtt_prefix, ch),
+                    'ON' if state > 0 else 'OFF',
+                    retain=True
                 )
-            elif cmd == 0:
                 self._mqtt_client.publish(
-                    '%s/switch/%d' % (self._mqtt_prefix, ch),
-                    'OFF'
+                    '%s/state-f/%d/brightness' % (self._mqtt_prefix, ch),
+                    str(brightness),
+                    retain=True
                 )
+        elif mode == 1:  # regular nooLite
+            if cmd == 25 or cmd == 2 or cmd == 0:  # switch and motion detector
+                switch_topic = '%s/switch/%d' % (self._mqtt_prefix, ch)
+                self._mqtt_client.publish(
+                    switch_topic,
+                    'ON' if cmd != 0 else 'OFF'
+                )
+                # remove any pending postponed message to this switch
+                self._postponed = [
+                    (trigger_time, topic, payload)
+                    for (trigger_time, topic, payload) in self._postponed
+                    if topic != switch_topic
+                ]
+                # set postponed message for motion detector
+                if cmd == 25:
+                    interval = packet[7] * 5
+                    self._postponed.append((time() + interval, switch_topic, 'OFF'))
+
             elif cmd == 21:  # temperature & humidity sensor
                 deci_temp = packet[7] | ((packet[8] & 0x0f) << 8)
 

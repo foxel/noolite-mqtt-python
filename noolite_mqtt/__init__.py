@@ -1,11 +1,11 @@
-#!/usr/bin/python3
+import argparse
+import re
+import signal
+from time import sleep, monotonic as time
 
 import paho.mqtt.client as mqtt
-from noolite_serial import NooLiteSerial
-import re
-from time import sleep, monotonic as time
-import signal
-import argparse
+
+from noolite_mqtt.noolite_serial import NooLiteSerial
 
 COMMANDS = {
     'OFF': 0,
@@ -33,7 +33,8 @@ F_COMMANDS_FMT1 = {
 
 class NooLiteMQTT:
     def __init__(self, serial_device: str, mqtt_host: str,
-                 mqtt_port: int, mqtt_prefix: str):
+                 mqtt_port: int, mqtt_prefix: str,
+                 username: str=None, password: str=None):
         self._noo_serial = NooLiteSerial(serial_device)
 
         self._mqtt_prefix = mqtt_prefix
@@ -41,6 +42,9 @@ class NooLiteMQTT:
         self._mqtt_client = mqtt.Client()
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_message = self._on_message
+
+        if username is not None and username != '':
+            self._mqtt_client.username_pw_set(username, password)
 
         self._postponed = []
 
@@ -92,7 +96,7 @@ class NooLiteMQTT:
     def _on_message(self, _client: mqtt.Client, _user_data, msg: mqtt.MQTTMessage):
         print(msg.topic + ': ' + msg.payload.decode())
 
-        tx_match = re.match('%s/tx/(\d+)' % self._mqtt_prefix, msg.topic)
+        tx_match = re.match('%s/tx/(\\d+)' % self._mqtt_prefix, msg.topic)
         if tx_match:
             ch = int(tx_match.group(1))
             cmd = msg.payload.decode()
@@ -100,7 +104,7 @@ class NooLiteMQTT:
                 self._noo_serial.send_command(ch, COMMANDS[cmd], mode=0)
                 sleep(0.3)
 
-        tx_match = re.match('%s/tx-f/(\d+)' % self._mqtt_prefix, msg.topic)
+        tx_match = re.match('%s/tx-f/(\\d+)' % self._mqtt_prefix, msg.topic)
         if tx_match:
             ch = int(tx_match.group(1))
             cmd = msg.payload.decode()
@@ -109,7 +113,7 @@ class NooLiteMQTT:
                 sleep(0.3)
 
         tx_match = re.match(
-            '%s/tx/(\d+)/([A-Z]+)' % self._mqtt_prefix, msg.topic
+            '%s/tx/(\\d+)/([A-Z]+)' % self._mqtt_prefix, msg.topic
         )
         if tx_match:
             ch = int(tx_match.group(1))
@@ -122,7 +126,7 @@ class NooLiteMQTT:
                 sleep(0.3)
 
         tx_match = re.match(
-            '%s/tx-f/(\d+)/([A-Z]+)' % self._mqtt_prefix, msg.topic
+            '%s/tx-f/(\\d+)/([A-Z]+)' % self._mqtt_prefix, msg.topic
         )
         if tx_match:
             ch = int(tx_match.group(1))
@@ -195,14 +199,23 @@ class NooLiteMQTT:
                 )
 
 
-parser = argparse.ArgumentParser()
+def cli():
+    parser = argparse.ArgumentParser()
 
-parser.add_argument('serial_device', help='Serial device name', type=str)
-parser.add_argument('mqtt_prefix', help='MQTT prefix', type=str)
-parser.add_argument('mqtt_host', help='MQTT hostname', type=str)
-parser.add_argument('mqtt_port', help='MQTT port', type=int,
-                    nargs='?', default=1883)
+    parser.add_argument('serial_device', help='Serial device name', type=str)
+    parser.add_argument('mqtt_prefix', help='MQTT prefix', type=str)
+    parser.add_argument('mqtt_host', help='MQTT hostname', type=str)
+    parser.add_argument('username', help='MQTT user name', type=str,
+                        nargs='?', default=None)
+    parser.add_argument('password', help='MQTT user password', type=str,
+                        nargs='?', default=None)
+    parser.add_argument('-p', '--mqtt_port', help='MQTT port', type=int,
+                        nargs='?', default=1883)
 
-args = vars(parser.parse_args())
+    args = vars(parser.parse_args())
 
-NooLiteMQTT(**args).loop()
+    NooLiteMQTT(**args).loop()
+
+
+if __name__ == '__main__':
+    cli()

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import sys
-from noolite_serial import NooLiteSerial
+from noolite_mqtt.noolite_serial import NooLiteSerial
 
 noo_serial = NooLiteSerial('/dev/ttyS0')
 

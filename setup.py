@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="ndms2_client",
+    name="noolite-mqtt",
     version="0.0.4",
     author="Andrey F. Kupreychik",
     author_email="foxel@quickfox.ru",

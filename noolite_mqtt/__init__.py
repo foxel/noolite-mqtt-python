@@ -189,6 +189,7 @@ class NooLiteMQTT:
 
                 temp = deci_temp / 10.0
                 hum = packet[9]
+                battery = packet[10] / 50.0  # very custom, original PT111 sends 255 value here always
                 self._mqtt_client.publish(
                     '%s/temperature/%d' % (self._mqtt_prefix, ch),
                     '%.1f' % temp
@@ -196,6 +197,16 @@ class NooLiteMQTT:
                 self._mqtt_client.publish(
                     '%s/humidity/%d' % (self._mqtt_prefix, ch),
                     '%d' % hum
+                )
+                self._mqtt_client.publish(
+                    '%s/battery/%d' % (self._mqtt_prefix, ch),
+                    '%.2f' % battery
+                )
+
+            elif cmd == 20:  # low battery
+                self._mqtt_client.publish(
+                    '%s/battery/%d' % (self._mqtt_prefix, ch),
+                    'LOW'
                 )
 
 

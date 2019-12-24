@@ -1,14 +1,23 @@
-#!/usr/bin/python3
-
 import serial
+
+from .enums import Command, Mode, Request
 
 
 class NooLiteCommand:
-    def __init__(self, ch, cmd, mode=0, ctr=0, res=0, fmt=0, d0=0, d1=0, d2=0, d3=0, id0=0, id1=0, id2=0, id3=0):
+    def __init__(
+            self,
+            ch: int,
+            cmd: Command,
+            mode: Mode = Mode.TX,
+            ctr: Request = Request.CMD,
+            fmt: int = 0,
+            d0: int = 0, d1: int = 0, d2: int = 0, d3: int = 0,
+            id0: int = 0, id1: int = 0, id2: int = 0, id3: int = 0
+    ):
         self.st = 171
         self.mode = mode
         self.ctr = ctr
-        self.res = res
+        self.res = 0
         self.ch = ch
         self.cmd = cmd
         self.fmt = fmt
@@ -69,20 +78,29 @@ class NooLiteSerial:
     def __init__(self, tty_name):
         self.tty = self._get_tty(tty_name)
 
-    def on(self, ch):
-        self.send_command(ch, 2, 2, 0)
+    def on(self, ch, noolite_f: bool = False):
+        self.send_command(ch, Command.ON, Mode.TX_F if noolite_f else Mode.TX, Request.CMD)
         pass
 
-    def off(self, ch):
-        self.send_command(ch, 0, 2, 0)
+    def off(self, ch, noolite_f: bool = False):
+        self.send_command(ch, Command.OFF, Mode.TX_F if noolite_f else Mode.TX, Request.CMD)
         pass
 
     def status(self, ch):
-        self.send_command(ch, 128, 2, 0)
+        self.send_command(ch, Command.READ_STATE, Mode.TX_F, Request.CMD)
         pass
 
-    def send_command(self, ch, cmd, mode=0, ctr=0, res=0, fmt=0, d0=0, d1=0, d2=0, d3=0, id0=0, id1=0, id2=0, id3=0):
-        command = NooLiteCommand(ch, cmd, mode, ctr, res, fmt, d0, d1, d2, d3, id0, id1, id2, id3)
+    def send_command(
+            self,
+            ch: int,
+            cmd: Command,
+            mode: Mode = Mode.TX,
+            ctr: Request = Request.CMD,
+            fmt: int = 0,
+            d0: int = 0, d1: int = 0, d2: int = 0, d3: int = 0,
+            id0: int = 0, id1: int = 0, id2: int = 0, id3: int = 0
+    ):
+        command = NooLiteCommand(ch, cmd, mode, ctr, fmt, d0, d1, d2, d3, id0, id1, id2, id3)
         self.tty.write(command.to_bytes())
         pass
 

@@ -6,28 +6,40 @@ from time import sleep, monotonic as time
 import paho.mqtt.client as mqtt
 
 from noolite_mqtt.noolite_serial import NooLiteSerial
+from .enums import Command, Mode, Request
 
 COMMANDS = {
-    'OFF': 0,
-    'ON': 2,
-    'SWITCH': 4,
-    'BIND': 15,
+    'OFF': Command.OFF,
+    'ON': Command.ON,
+    'SWITCH': Command.TOGGLE,
+    'TOGGLE': Command.TOGGLE,
+    'BIND': Command.BIND,
+    'UNBIND': Command.UNBIND,
 }
 
 COMMANDS_FMT1 = {
-    'BRIGHTNESS': 6,
+    'BRIGHTNESS': Command.BRIGHT_SET,
 }
 
 F_COMMANDS = {
-    'OFF': 0,
-    'ON': 2,
-    'SWITCH': 4,
-    'BIND': 15,
-    'GET_STATE': 128,
+    'OFF': Command.OFF,
+    'ON': Command.ON,
+    'SWITCH': Command.TOGGLE,
+    'TOGGLE': Command.TOGGLE,
+    'BIND': Command.BIND,
+    'UNBIND': Command.UNBIND,
+    'GET_STATE': Command.READ_STATE,
 }
 
 F_COMMANDS_FMT1 = {
-    'BRIGHTNESS': 6,
+    'BRIGHTNESS': Command.BRIGHT_SET,
+}
+
+BOOLEANS = {
+    '1': True,
+    'ON': True,
+    '0': False,
+    'OFF': False,
 }
 
 
@@ -89,7 +101,9 @@ class NooLiteMQTT:
         # reconnect then subscriptions will be renewed.
         client.subscribe([
             ('%s/tx/#' % self._mqtt_prefix, 0),
-            ('%s/tx-f/#' % self._mqtt_prefix, 0)
+            ('%s/tx-f/#' % self._mqtt_prefix, 0),
+            ('%s/bind/#' % self._mqtt_prefix, 0),
+            ('%s/bind-f/#' % self._mqtt_prefix, 0)
         ])
 
     # The callback for when a PUBLISH message is received from the server.
@@ -101,7 +115,7 @@ class NooLiteMQTT:
             ch = int(tx_match.group(1))
             cmd = msg.payload.decode()
             if cmd in COMMANDS:
-                self._noo_serial.send_command(ch, COMMANDS[cmd], mode=0)
+                self._noo_serial.send_command(ch, COMMANDS[cmd], mode=Mode.TX)
                 sleep(0.3)
 
         tx_match = re.match('%s/tx-f/(\\d+)' % self._mqtt_prefix, msg.topic)
@@ -109,7 +123,7 @@ class NooLiteMQTT:
             ch = int(tx_match.group(1))
             cmd = msg.payload.decode()
             if cmd in F_COMMANDS:
-                self._noo_serial.send_command(ch, F_COMMANDS[cmd], mode=2)
+                self._noo_serial.send_command(ch, F_COMMANDS[cmd], mode=Mode.TX_F)
                 sleep(0.3)
 
         tx_match = re.match(
@@ -120,9 +134,7 @@ class NooLiteMQTT:
             cmd = str(tx_match.group(2))
             if cmd in COMMANDS_FMT1:
                 arg = int(msg.payload.decode())
-                self._noo_serial.send_command(
-                    ch, COMMANDS_FMT1[cmd], mode=0, fmt=1, d0=arg
-                )
+                self._noo_serial.send_command(ch, COMMANDS_FMT1[cmd], mode=Mode.TX, fmt=1, d0=arg)
                 sleep(0.3)
 
         tx_match = re.match(
@@ -133,8 +145,33 @@ class NooLiteMQTT:
             cmd = str(tx_match.group(2))
             if cmd in F_COMMANDS_FMT1:
                 arg = int(msg.payload.decode())
+                self._noo_serial.send_command(ch, F_COMMANDS_FMT1[cmd], mode=Mode.TX_F, fmt=1, d0=arg)
+                sleep(0.3)
+
+        # RX BIND
+        bind_match = re.match('%s/bind/(\\d+)' % self._mqtt_prefix, msg.topic)
+        if bind_match:
+            ch = int(bind_match.group(1))
+            bind_en = msg.payload.decode()
+            if bind_en in BOOLEANS:
                 self._noo_serial.send_command(
-                    ch, F_COMMANDS_FMT1[cmd], mode=2, fmt=1, d0=arg
+                    ch,
+                    Command.OFF,
+                    mode=Mode.RX,
+                    ctr=Request.BIND_START if BOOLEANS[bind_en] else Request.BIND_STOP
+                )
+                sleep(0.3)
+
+        bind_match = re.match('%s/bind-f/(\\d+)' % self._mqtt_prefix, msg.topic)
+        if bind_match:
+            ch = int(bind_match.group(1))
+            bind_en = msg.payload.decode()
+            if bind_en in BOOLEANS:
+                self._noo_serial.send_command(
+                    ch,
+                    Command.OFF,
+                    mode=Mode.RX_F,
+                    ctr=Request.BIND_START if BOOLEANS[bind_en] else Request.BIND_STOP
                 )
                 sleep(0.3)
 
@@ -147,8 +184,8 @@ class NooLiteMQTT:
             '%s/echo/%d' % (self._mqtt_prefix, ch),
             '[%s]' % ','.join([str(b) for b in packet])
         )
-        if mode == 2:  # nooLite-F
-            if cmd == 130:  # switch state
+        if mode == Mode.TX_F:  # nooLite-F state case
+            if cmd == Command.SEND_STATE:  # switch state
                 state = packet[9] & 0x0f
                 brightness = packet[10] & 0xff
                 self._mqtt_client.publish(
@@ -161,12 +198,12 @@ class NooLiteMQTT:
                     str(brightness),
                     retain=True
                 )
-        elif mode == 1:  # regular nooLite
-            if cmd == 25 or cmd == 2 or cmd == 0:  # switch and motion detector
+        elif mode == Mode.RX or mode == Mode.RX_F:  # regular command
+            if cmd == Command.TEMPORARY_ON or cmd == Command.ON or cmd == Command.OFF:  # switch and motion detector
                 switch_topic = '%s/switch/%d' % (self._mqtt_prefix, ch)
                 self._mqtt_client.publish(
                     switch_topic,
-                    'ON' if cmd != 0 else 'OFF'
+                    'ON' if cmd != Command.OFF else 'OFF'
                 )
                 # remove any pending postponed message to this switch
                 self._postponed = [
@@ -175,11 +212,11 @@ class NooLiteMQTT:
                     if topic != switch_topic
                 ]
                 # set postponed message for motion detector
-                if cmd == 25:
+                if cmd == Command.TEMPORARY_ON:
                     interval = packet[7] * 5
                     self._postponed.append((time() + interval, switch_topic, 'OFF'))
 
-            elif cmd == 21:  # temperature & humidity sensor
+            elif cmd == Command.SENSOR_TEMP_HUM:  # temperature & humidity sensor
                 deci_temp = packet[7] | ((packet[8] & 0x0f) << 8)
 
                 # fix for signed 12-bit values
@@ -203,7 +240,7 @@ class NooLiteMQTT:
                     '%.2f' % battery
                 )
 
-            elif cmd == 20:  # low battery
+            elif cmd == Command.BATTERY_LOW:  # low battery
                 self._mqtt_client.publish(
                     '%s/battery/%d' % (self._mqtt_prefix, ch),
                     'LOW'

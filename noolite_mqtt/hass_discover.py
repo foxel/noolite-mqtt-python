@@ -59,7 +59,7 @@ def push_noolite_root_device(client: mqtt.Client, mqtt_prefix: str, root_id: str
 
 
 def push_pm112(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_rx_%d' % (root_id, channel)
     push_discovery(
         client, 'binary_sensor', 'noolite_motion_%d' % channel,
         {
@@ -75,7 +75,7 @@ def push_pm112(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int
 
 
 def push_pt111(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_rx_%d' % (root_id, channel)
     common = {
         **device(root_id, device_id, 'PT111 Temperature and Humidity Sensor'),
         **lwt(mqtt_prefix),
@@ -107,7 +107,7 @@ def push_pt111(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int
 
 
 def push_pt112(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_rx_%d' % (root_id, channel)
     push_discovery(
         client, 'sensor', 'noolite_temperature_%d' % channel,
         {
@@ -124,7 +124,7 @@ def push_pt112(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int
 
 
 def push_pl111(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_rx_%d' % (root_id, channel)
     push_discovery(
         client, 'binary_sensor', 'noolite_light_%d' % channel,
         {
@@ -140,7 +140,7 @@ def push_pl111(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int
 
 
 def push_ds1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_rx_%d' % (root_id, channel)
     push_discovery(
         client, 'binary_sensor', 'noolite_open_%d' % channel,
         {
@@ -156,7 +156,7 @@ def push_ds1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
 
 
 def push_ws1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_rx_%d' % (root_id, channel)
     push_discovery(
         client, 'binary_sensor', 'noolite_water_%d' % channel,
         {
@@ -172,7 +172,7 @@ def push_ws1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
 
 
 def push_pxx(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_rx_%d' % (root_id, channel)
     push_discovery(
         client, 'binary_sensor', 'noolite_switch_%d' % channel,
         {
@@ -187,7 +187,7 @@ def push_pxx(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
 
 
 def push_sr1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, *, mode: str = 'switch'):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_tx_%d' % (root_id, channel)
     push_discovery(
         client, mode, 'noolite_switch_%d' % channel,
         {
@@ -204,7 +204,7 @@ def push_su1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, 
 
 
 def push_srf1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, *, mode: str = 'switch'):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_txf_%d' % (root_id, channel)
     push_discovery(
         client, mode, 'noolite_switch_%d' % channel,
         {
@@ -222,7 +222,7 @@ def push_suf1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int,
 
 
 def push_foxel_sensor_1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
-    device_id = '%s_%d' % (root_id, channel)
+    device_id = '%s_rx_%d' % (root_id, channel)
     common = {
         'expire_after': 600,
         'force_update': True,

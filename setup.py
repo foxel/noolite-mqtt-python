@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="noolite-mqtt",
-    version="0.1.0",
+    version="0.1.0.post1",
     author="Andrey F. Kupreychik",
     author_email="foxel@quickfox.ru",
     description="NooLite MQTT binding",

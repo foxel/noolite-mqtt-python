@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="noolite-mqtt",
-    version="0.0.6",
+    version="0.1.0",
     author="Andrey F. Kupreychik",
     author_email="foxel@quickfox.ru",
     description="NooLite MQTT binding",
@@ -25,13 +25,14 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'noolite-mqtt=noolite_mqtt:cli',
+            'noolite-mqtt-ha-discover=noolite_mqtt.hass_discover:cli',
         ],
     },
-    classifiers=(
+    classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-    ),
+    ],
 )

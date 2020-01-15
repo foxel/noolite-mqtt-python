@@ -53,6 +53,7 @@ class NooLiteMQTT:
 
         self._mqtt_client = mqtt.Client()
         self._mqtt_client.on_connect = self._on_connect
+        self._mqtt_client.on_disconnect = self._on_disconnect
         self._mqtt_client.on_message = self._on_message
 
         if username is not None and username != '':
@@ -105,6 +106,11 @@ class NooLiteMQTT:
             ('%s/bind/#' % self._mqtt_prefix, 0),
             ('%s/bind-f/#' % self._mqtt_prefix, 0)
         ])
+
+    def _on_disconnect(self, _client: mqtt.Client, _user_data, rc: int):
+        self._exit = True
+        if rc != 0:
+            print("Unexpected disconnection.")
 
     # The callback for when a PUBLISH message is received from the server.
     def _on_message(self, _client: mqtt.Client, _user_data, msg: mqtt.MQTTMessage):
@@ -243,7 +249,7 @@ class NooLiteMQTT:
             elif cmd == Command.BATTERY_LOW:  # low battery
                 self._mqtt_client.publish(
                     '%s/battery/%d' % (self._mqtt_prefix, ch),
-                    'LOW'
+                    '0'
                 )
 
 
@@ -253,12 +259,9 @@ def cli():
     parser.add_argument('serial_device', help='Serial device name', type=str)
     parser.add_argument('mqtt_prefix', help='MQTT prefix', type=str)
     parser.add_argument('mqtt_host', help='MQTT hostname', type=str)
-    parser.add_argument('username', help='MQTT user name', type=str,
-                        nargs='?', default=None)
-    parser.add_argument('password', help='MQTT user password', type=str,
-                        nargs='?', default=None)
-    parser.add_argument('-p', '--mqtt_port', help='MQTT port', type=int,
-                        nargs='?', default=1883)
+    parser.add_argument('username', help='MQTT user name', type=str, nargs='?', default=None)
+    parser.add_argument('password', help='MQTT user password', type=str, nargs='?', default=None)
+    parser.add_argument('-p', '--mqtt_port', help='MQTT port', type=int, nargs='?', default=1883)
 
     args = vars(parser.parse_args())
 

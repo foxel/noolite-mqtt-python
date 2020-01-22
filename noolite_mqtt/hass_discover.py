@@ -171,32 +171,58 @@ def push_ws1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
     )
 
 
-def push_pxx(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
+def push_pxx(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, *,
+             channel2: int = None, channel3: int = None, channel4: int = None, mode: str = 'switch'):
+
     device_id = '%s_rx_%d' % (root_id, channel)
-    push_discovery(
-        client, 'binary_sensor', 'noolite_switch_%d' % channel,
-        {
-            'state_topic': '%s/switch/%d' % (mqtt_prefix, channel),
-            'payload_on': 'ON',
-            'payload_off': 'OFF',
-            'unique_id': '%s_switch' % device_id,
-            **device(root_id, device_id, 'PX-XXX Remote Switch'),
-            **lwt(mqtt_prefix),
-        }
-    )
+    channels = [channel, channel2, channel3, channel4]
+
+    for ch in channels:
+        if ch is None:
+            continue
+
+        if mode == 'switch':
+            push_discovery(
+                client, 'binary_sensor', 'noolite_switch_%d' % ch,
+                {
+                    'state_topic': '%s/switch/%d' % (mqtt_prefix, ch),
+                    'payload_on': 'ON',
+                    'payload_off': 'OFF',
+                    'unique_id': '%s_rx_%d_switch' % (root_id, ch),
+                    **device(root_id, device_id, 'PX-XXX Remote Switch'),
+                    **lwt(mqtt_prefix),
+                }
+            )
+        elif mode == 'button':
+            push_discovery(
+                client, 'binary_sensor', 'noolite_button_%d' % ch,
+                {
+                    'state_topic': '%s/button/%d' % (mqtt_prefix, ch),
+                    'payload_on': 'TOGGLE',
+                    'off_delay': 1,
+                    'unique_id': '%s_rx_%d_button' % (root_id, ch),
+                    **device(root_id, device_id, 'PX-XXX Remote Button'),
+                    **lwt(mqtt_prefix),
+                }
+            )
+        else:
+            raise TypeError('PXX mode should be either switch or button')
 
 
 def push_sr1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, *, mode: str = 'switch'):
     device_id = '%s_tx_%d' % (root_id, channel)
-    push_discovery(
-        client, mode, 'noolite_switch_%d' % channel,
-        {
-            'command_topic': '%s/tx/%d' % (mqtt_prefix, channel),
-            'unique_id': '%s_switch' % device_id,
-            **device(root_id, device_id, 'SR-1-X Switch'),
-            **lwt(mqtt_prefix),
-        }
-    )
+    if mode == 'switch' or mode == 'light':
+        push_discovery(
+            client, mode, 'noolite_switch_%d' % channel,
+            {
+                'command_topic': '%s/tx/%d' % (mqtt_prefix, channel),
+                'unique_id': '%s_switch' % device_id,
+                **device(root_id, device_id, 'SR-1-X Switch'),
+                **lwt(mqtt_prefix),
+            }
+        )
+    else:
+        raise TypeError('SR1 mode should be either switch or light')
 
 
 def push_su1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, *, mode: str = 'light'):
@@ -205,16 +231,19 @@ def push_su1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, 
 
 def push_srf1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, *, mode: str = 'switch'):
     device_id = '%s_txf_%d' % (root_id, channel)
-    push_discovery(
-        client, mode, 'noolite_switch_%d' % channel,
-        {
-            'command_topic': '%s/tx-f/%d' % (mqtt_prefix, channel),
-            'state_topic': '%s/state-f/%d' % (mqtt_prefix, channel),
-            'unique_id': '%s_switch' % device_id,
-            **device(root_id, device_id, 'SRF-1-X Switch'),
-            **lwt(mqtt_prefix),
-        }
-    )
+    if mode == 'switch' or mode == 'light':
+        push_discovery(
+            client, mode, 'noolite_switch_%d' % channel,
+            {
+                'command_topic': '%s/tx-f/%d' % (mqtt_prefix, channel),
+                'state_topic': '%s/state-f/%d' % (mqtt_prefix, channel),
+                'unique_id': '%s_switch' % device_id,
+                **device(root_id, device_id, 'SRF-1-X Switch'),
+                **lwt(mqtt_prefix),
+            }
+        )
+    else:
+        raise TypeError('SRF1 mode should be either switch or light')
 
 
 def push_suf1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, *, mode: str = 'light'):

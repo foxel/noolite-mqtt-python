@@ -222,6 +222,13 @@ class NooLiteMQTT:
                     interval = packet[7] * 5
                     self._postponed.append((time() + interval, switch_topic, 'OFF'))
 
+            elif cmd == Command.TOGGLE:  # remote button
+                switch_topic = '%s/button/%d' % (self._mqtt_prefix, ch)
+                self._mqtt_client.publish(
+                    switch_topic,
+                    'TOGGLE'
+                )
+
             elif cmd == Command.SENSOR_TEMP_HUM:  # temperature & humidity sensor
                 deci_temp = packet[7] | ((packet[8] & 0x0f) << 8)
 

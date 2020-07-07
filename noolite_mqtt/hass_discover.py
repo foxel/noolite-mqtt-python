@@ -250,7 +250,7 @@ def push_suf1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int,
     push_srf1(client, mqtt_prefix, root_id, channel, mode=mode)
 
 
-def push_foxel_sensor_1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int):
+def push_foxel_sensor_1(client: mqtt.Client, mqtt_prefix: str, root_id: str, channel: int, *, battery_max: float = 4.5):
     device_id = '%s_rx_%d' % (root_id, channel)
     common = {
         'expire_after': 600,
@@ -295,9 +295,22 @@ def push_foxel_sensor_1(client: mqtt.Client, mqtt_prefix: str, root_id: str, cha
         client, 'sensor', 'noolite_battery_%d' % channel,
         {
             'state_topic': '%s/battery/%d' % (mqtt_prefix, channel),
-            'device_class': 'battery',
+            'icon': 'mdi:battery',
             'unit_of_measurement': 'V',
             'unique_id': '%s_battery' % device_id,
+            **common,
+        }
+    )
+    battery_min = 3  # v
+    battery_divider = (battery_max - battery_min) / 100
+    push_discovery(
+        client, 'sensor', 'noolite_battery_lvl_%d' % channel,
+        {
+            'state_topic': '%s/battery/%d' % (mqtt_prefix, channel),
+            'value_template': '{{ (((value | float) - 3)/%.5f) | round(1) }}' % battery_divider,
+            'device_class': 'battery',
+            'unit_of_measurement': '%',
+            'unique_id': '%s_battery_lvl' % device_id,
             **common,
         }
     )

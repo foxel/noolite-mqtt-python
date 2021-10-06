@@ -296,6 +296,7 @@ def push_foxel_sensor_1(client: mqtt.Client, mqtt_prefix: str, root_id: str, cha
         {
             'state_topic': '%s/battery/%d' % (mqtt_prefix, channel),
             'icon': 'mdi:battery',
+            'device_class': 'voltage',
             'unit_of_measurement': 'V',
             'unique_id': '%s_battery' % device_id,
             **common,

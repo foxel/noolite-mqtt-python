@@ -1,6 +1,5 @@
 language: python
 python:
-- '3.5'
 - '3.6'
 script: pytest
 deploy:
@@ -11,4 +10,4 @@ deploy:
     secure: mVAJaXFdaOnCJFhf1Cg8kRQmre9Z7mr0L/sqJJ2N4q9/gUa4atGlsnSBcVXczVwoVlUqMx2/Bb44SctpiKCsfw1OUjU92r3DoRc7uPS1AA2W3TsJ3F69cqP7ht0kuAUTFs9fVBN3A44y4nizlJPHWmNq5hRuxeshFSctGrEiQE6wqrmBjGOm0ZUiYzRYgit43zKYfwjZD2vP3Ehsa5phjMDB71wOPa7+HrZGJN5x2Kw7dm5/IneuvBjtTmBuD1qGFadoBxStbb+s10JqcEIXtMLufltZePNjY9kc+B3S0h5myaVBEG9ijfBuuwEoZfGwEFhsTRwGMhkS74F9LicGPFeUctW/UxDrilLYtrSWFCpqc1X8Gfc9tMcMrhNa+xDX5ozKcqp0LQwMxFK/9tu5bbw2zvuKDfIczeM7BT6rkzVzmY3I414fVuy6UNdIk2E2HcTKeWEBzcwIefg9GANphjAqIqumBXxiDoIzJdj4Y+/D1JJsyJHSTfS4/JjEeozQPiJrfRC/pBc4fm1fYqJuZNAkCKdH68cDQgwgIBn5qDKrrr2LeZlZoC8iavhlNq8wn1CozqQb1cAKGTq8Jch6Kkf2LYFQaqV89n/eCRzreCS92VVpnX+kAPtSNxzG0iwBdHpgYX1mrIi6RRKcy+OFOQ4UqxLmAHEb+UIZmDGfsbU=
   on:
     tags: true
-    python: '3.5'
+    python: '3.6'
